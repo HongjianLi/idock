@@ -567,8 +567,9 @@ void ligand::write_models(const path& output_ligand_path, const vector<result>& 
 		{
 			if (line.size() >= 78) // This line starts with "ATOM" or "HETATM".
 			{
-				const double free_energy = line[77] == 'H' ? 0 : rec.maps[heavy_atoms[heavy_atom].xs][rec.index(rec.index(r.heavy_atoms[heavy_atom]))];
-				const array<double, 3>& coordinate = line[77] == 'H' ? r.hydrogens[hydrogen++] : r.heavy_atoms[heavy_atom++];
+				const bool is_hydrogen = line[77] == 'H' && (line.size() == 78 || line[78] == ' ');
+				const double free_energy = is_hydrogen ? 0 : rec.maps[heavy_atoms[heavy_atom].xs][rec.index(rec.index(r.heavy_atoms[heavy_atom]))];
+				const array<double, 3>& coordinate = is_hydrogen ? r.hydrogens[hydrogen++] : r.heavy_atoms[heavy_atom++];
 				ofs << line.substr(0, 30)
 					<< setw(8) << coordinate[0]
 					<< setw(8) << coordinate[1]
