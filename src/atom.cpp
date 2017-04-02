@@ -151,7 +151,7 @@ atom::atom(const string& line) :
 	serial(stoul(line.substr(6, 5))),
 	name(line.substr(12, 4)),
 	coord({ stof(line.substr(30, 8)), stof(line.substr(38, 8)), stof(line.substr(46, 8)) }),
-	ad(find(ad_strings.cbegin(), ad_strings.cend(), line.substr(77, isspace(line[78]) ? 1 : 2)) - ad_strings.cbegin()),
+	ad(find(ad_strings.cbegin(), ad_strings.cend(), line.substr(77, isspace(line[78]) || line.size() == 78 ? 1 : 2)) - ad_strings.cbegin()),
 	xs(ad_to_xs[ad]),
 	rf(ad_to_rf[ad])
 {

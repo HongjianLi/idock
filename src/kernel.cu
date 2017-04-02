@@ -77,7 +77,7 @@ bool evaluate(float* e, float* g, float* a, float* q, float* c, float* d, float*
 			q1 = q[k0 += gds];
 			q2 = q[k0 += gds];
 			q3 = q[k0 += gds];
-			assert(fabs(q0*q0 + q1*q1 + q2*q2 + q3*q3 - 1.0f) < 2e-3f);
+			//assert(fabs(q0*q0 + q1*q1 + q2*q2 + q3*q3 - 1.0f) < 2e-3f);
 			q00 = q0 * q0;
 			q01 = q0 * q1;
 			q02 = q0 * q2;
@@ -143,9 +143,9 @@ bool evaluate(float* e, float* g, float* a, float* q, float* c, float* d, float*
 			k0 = static_cast<int>((c0 - cr0.x) * gri);
 			k1 = static_cast<int>((c1 - cr0.y) * gri);
 			k2 = static_cast<int>((c2 - cr0.z) * gri);
-			assert(k0 + 1 < npr.x);
-			assert(k1 + 1 < npr.y);
-			assert(k2 + 1 < npr.z);
+			//assert(k0 + 1 < npr.x);
+			//assert(k1 + 1 < npr.y);
+			//assert(k2 + 1 < npr.z);
 			k0 = npr.x * (npr.y * k2 + k1) + k0;
 
 			// Retrieve the grid map and lookup the value
@@ -176,7 +176,7 @@ bool evaluate(float* e, float* g, float* a, float* q, float* c, float* d, float*
 			a0 = m0 * xy0[i] + m1 * xy1[i] + m2 * xy2[i];
 			a1 = m3 * xy0[i] + m4 * xy1[i] + m5 * xy2[i];
 			a2 = m6 * xy0[i] + m7 * xy1[i] + m8 * xy2[i];
-			assert(fabs(a0*a0 + a1*a1 + a2*a2 - 1.0f) < 2e-3f);
+			//assert(fabs(a0*a0 + a1*a1 + a2*a2 - 1.0f) < 2e-3f);
 			a[k0  = i * gd3 + gid] = a0;
 			a[k0 += gds] = a1;
 			a[k0 += gds] = a2;
@@ -194,16 +194,16 @@ bool evaluate(float* e, float* g, float* a, float* q, float* c, float* d, float*
 			q01 = r0 * q1 + r1 * q0 + r2 * q3 - r3 * q2;
 			q02 = r0 * q2 - r1 * q3 + r2 * q0 + r3 * q1;
 			q03 = r0 * q3 + r1 * q2 - r2 * q1 + r3 * q0;
-			assert(fabs(q00*q00 + q01*q01 + q02*q02 + q03*q03 - 1.0f) < 2e-3f);
+			//assert(fabs(q00*q00 + q01*q01 + q02*q02 + q03*q03 - 1.0f) < 2e-3f);
 			q[k0  = i * gd4 + gid] = q00;
 			q[k0 += gds] = q01;
 			q[k0 += gds] = q02;
 			q[k0 += gds] = q03;
 		}
 	}
-	assert(b == nf - 1);
+	//assert(b == nf - 1);
 //	assert(w == nv * gds + gid);
-	assert(k == nf);
+	//assert(k == nf);
 
 	// Calculate intra-ligand free energy.
 	for (i = 0; i < np; ++i)
@@ -250,7 +250,7 @@ bool evaluate(float* e, float* g, float* a, float* q, float* c, float* d, float*
 		t[k0] = 0.0f;
 	}
 //	assert(w == nv * gds + gid);
-	assert(k == nf);
+	//assert(k == nf);
 	while (k)
 	{
 		--k;
@@ -320,7 +320,7 @@ bool evaluate(float* e, float* g, float* a, float* q, float* c, float* d, float*
 			t[k2] += t2 + v0 * f1 - v1 * f0;
 		}
 	}
-	assert(w == 6 * gds + gid);
+	//assert(w == 6 * gds + gid);
 
 	// Save the aggregated force and torque of ROOT frame to g.
 	g[i0  = gid] = f0;
@@ -514,7 +514,7 @@ void monte_carlo(const int nv, const int nf, const int na, const int np)
 			pr2 = bfp[o0];
 			o0 += gds;
 			s1xq3 = s1x[o0];
-			assert(fabs(s1xq0*s1xq0 + s1xq1*s1xq1 + s1xq2*s1xq2 + s1xq3*s1xq3 - 1.0f) < 2e-3f);
+			//assert(fabs(s1xq0*s1xq0 + s1xq1*s1xq1 + s1xq2*s1xq2 + s1xq3*s1xq3 - 1.0f) < 2e-3f);
 			nrm = sqrt(pr0*pr0 + pr1*pr1 + pr2*pr2);
 			ang = 0.5f * alp * nrm;
 //			sng = sinf(ang) / nrm;
@@ -525,12 +525,12 @@ void monte_carlo(const int nv, const int nf, const int na, const int np)
 			pq1 = sng * pr0;
 			pq2 = sng * pr1;
 			pq3 = sng * pr2;
-			assert(fabs(pq0*pq0 + pq1*pq1 + pq2*pq2 + pq3*pq3 - 1.0f) < 2e-3f);
+			//assert(fabs(pq0*pq0 + pq1*pq1 + pq2*pq2 + pq3*pq3 - 1.0f) < 2e-3f);
 			s2xq0 = pq0 * s1xq0 - pq1 * s1xq1 - pq2 * s1xq2 - pq3 * s1xq3;
 			s2xq1 = pq0 * s1xq1 + pq1 * s1xq0 + pq2 * s1xq3 - pq3 * s1xq2;
 			s2xq2 = pq0 * s1xq2 - pq1 * s1xq3 + pq2 * s1xq0 + pq3 * s1xq1;
 			s2xq3 = pq0 * s1xq3 + pq1 * s1xq2 - pq2 * s1xq1 + pq3 * s1xq0;
-			assert(fabs(s2xq0*s2xq0 + s2xq1*s2xq1 + s2xq2*s2xq2 + s2xq3*s2xq3 - 1.0f) < 2e-3f);
+			//assert(fabs(s2xq0*s2xq0 + s2xq1*s2xq1 + s2xq2*s2xq2 + s2xq3*s2xq3 - 1.0f) < 2e-3f);
 			s2x[o0 -= 3 * gds] = s2xq0;
 			s2x[o0 += gds] = s2xq1;
 			s2x[o0 += gds] = s2xq2;
