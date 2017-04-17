@@ -315,9 +315,9 @@ int main(int argc, char* argv[])
 		CUdeviceptr sfed;
 		CUdeviceptr sfdd;
 		const int sfsh = sf.ns;
-		assert(sfes == sizeof(sfed));
-		assert(sfds == sizeof(sfdd));
-		assert(sfss == sizeof(sfsh));
+		//assert(sfes == sizeof(sfed));
+		//assert(sfds == sizeof(sfdd));
+		//assert(sfss == sizeof(sfsh));
 		const size_t sfe_bytes = sizeof(float) * sf.e.size();
 		const size_t sfd_bytes = sizeof(float) * sf.d.size();
 		checkCudaErrors(cuMemAlloc(&sfed, sfe_bytes));
@@ -329,11 +329,11 @@ int main(int argc, char* argv[])
 		checkCudaErrors(cuMemcpyHtoD(sfsc, &sfsh, sfss));
 
 		// Initialize symbols for receptor.
-		assert(cr0s == sizeof(rec.corner0));
-		assert(cr1s == sizeof(rec.corner1));
-		assert(nprs == sizeof(rec.num_probes));
-		assert(gris == sizeof(rec.granularity_inverse));
-		assert(mpss == sizeof(float*) * sf.n);
+		//assert(cr0s == sizeof(rec.corner0));
+		//assert(cr1s == sizeof(rec.corner1));
+		//assert(nprs == sizeof(rec.num_probes));
+		//assert(gris == sizeof(rec.granularity_inverse));
+		//assert(mpss == sizeof(float*) * sf.n);
 		checkCudaErrors(cuMemcpyHtoD(cr0c, rec.corner0.data(), cr0s));
 		checkCudaErrors(cuMemcpyHtoD(cr1c, rec.corner1.data(), cr1s));
 		checkCudaErrors(cuMemcpyHtoD(nprc, rec.num_probes.data(), nprs));
@@ -342,8 +342,8 @@ int main(int argc, char* argv[])
 
 		// Initialize symbols for program control.
 		const int nbih = num_bfgs_iterations;
-		assert(nbis == sizeof(nbih));
-		assert(seds == sizeof(seed));
+		//assert(nbis == sizeof(nbih));
+		//assert(seds == sizeof(seed));
 		checkCudaErrors(cuMemcpyHtoD(nbic, &nbih, nbis));
 		checkCudaErrors(cuMemcpyHtoD(sedc, &seed, seds));
 
@@ -354,8 +354,8 @@ int main(int argc, char* argv[])
 		checkCudaErrors(cuMemHostAlloc((void**)&cnfh[dev], sizeof(float) * cnf_elems[dev] * num_tasks, 0));
 
 		// Initialize symbols for sln and lig.
-		assert(slns == sizeof(slnd[dev]));
-		assert(ligs == sizeof(ligd[dev]));
+		//assert(slns == sizeof(slnd[dev]));
+		//assert(ligs == sizeof(ligd[dev]));
 		checkCudaErrors(cuMemcpyHtoD(slnc, &slnd[dev], slns));
 		checkCudaErrors(cuMemcpyHtoD(ligc, &ligd[dev], ligs));
 		slnv[dev] = slnc;
@@ -547,7 +547,7 @@ int main(int argc, char* argv[])
 
 	// Wait until the io service pool has finished all its tasks.
 	io.wait();
-	assert(idle.size() == num_devices);
+	//assert(idle.size() == num_devices);
 
 	// Destroy contexts.
 	for (auto& context : contexts)
