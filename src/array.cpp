@@ -193,8 +193,8 @@ array<float, 4> vec4_to_qtn4(const array<float, 3>& axis, const float angle)
 
 array<float, 4> operator*(const array<float, 4>& a, const array<float, 4>& b)
 {
-	assert(normalized(a));
-	assert(normalized(b));
+	//assert(normalized(a));
+	//assert(normalized(b));
 	return
 	{
 		a[0] * b[0] - a[1] * b[1] - a[2] * b[2] - a[3] * b[3],
