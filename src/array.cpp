@@ -206,7 +206,7 @@ array<float, 4> operator*(const array<float, 4>& a, const array<float, 4>& b)
 
 array<float, 9> qtn4_to_mat3(const array<float, 4>& a)
 {
-	assert(normalized(a));
+	//assert(normalized(a));
 	const float ww = a[0]*a[0];
 	const float wx = a[0]*a[1];
 	const float wy = a[0]*a[2];
