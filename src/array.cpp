@@ -178,7 +178,7 @@ float distance_sqr(const array<float, 3>& a, const array<float, 3>& b)
 
 array<float, 4> vec4_to_qtn4(const array<float, 3>& axis, const float angle)
 {
-	assert(normalized(axis));
+	//assert(normalized(axis));
 	const float h = angle * 0.5f;
 	const float s = sin(h);
 	const float c = cos(h);
