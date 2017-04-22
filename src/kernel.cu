@@ -21,6 +21,53 @@ __constant__ const int* __restrict__ lig;
 
 extern __shared__ int shared[];
 
+float norm_sqr(const float a0, const float a1, const float a2)
+{
+	return a0 * a0 + a1 * a1 + a2 * a2;
+}
+
+float norm_sqr(const float a0, const float a1, const float a2, const float a3)
+{
+	return a0 * a0 + a1 * a1 + a2 * a2 + a3 * a3;
+}
+
+float norm(const float a0, const float a1, const float a2)
+{
+	return sqrt(norm_sqr(a0, a1, a2));
+}
+
+float norm(const float a0, const float a1, const float a2, const float a3)
+{
+	return sqrt(norm_sqr(a0, a1, a2, a3));
+}
+
+bool normalized(const float a0, const float a1, const float a2)
+{
+	return fabs(norm_sqr(a0, a1, a2) - 1.0f) < 1e-2f;
+}
+
+bool normalized(const float a0, const float a1, const float a2, const float a3)
+{
+	return fabs(norm_sqr(a0, a1, a2, a3) - 1.0f) < 1e-2f;
+}
+
+void normalize(float &a0, float &a1, float &a2)
+{
+	const float norm_inv = 1.0f / norm(a0, a1, a2);
+	a0 *= norm_inv;
+	a1 *= norm_inv;
+	a2 *= norm_inv;
+}
+
+void normalize(float &a0, float &a1, float &a2, float &a3)
+{
+	const float norm_inv = 1.0f / norm(a0, a1, a2, a3);
+	a0 *= norm_inv;
+	a1 *= norm_inv;
+	a2 *= norm_inv;
+	a3 *= norm_inv;
+}
+
 __device__  __noinline__// __forceinline__
 bool evaluate(float* e, float* g, float* a, float* q, float* c, float* d, float* f, float* t, const float* x, const int nf, const int na, const int np, const float eub)
 {
@@ -176,6 +223,7 @@ bool evaluate(float* e, float* g, float* a, float* q, float* c, float* d, float*
 			a0 = m0 * xy0[i] + m1 * xy1[i] + m2 * xy2[i];
 			a1 = m3 * xy0[i] + m4 * xy1[i] + m5 * xy2[i];
 			a2 = m6 * xy0[i] + m7 * xy1[i] + m8 * xy2[i];
+			normalize(a0, a1, a2);
 			assert(fabs(a0*a0 + a1*a1 + a2*a2 - 1.0f) < 2e-3f);
 			a[k0  = i * gd3 + gid] = a0;
 			a[k0 += gds] = a1;
@@ -527,7 +575,7 @@ void monte_carlo(const int nv, const int nf, const int na, const int np)
 			pq1 = sng * pr0;
 			pq2 = sng * pr1;
 			pq3 = sng * pr2;
-      if (isnan(pq0) || isnan(pq1) || isnan(pq2) || isnan(pq3)) { double_break = true; break; }
+			if (isnan(pq0) || isnan(pq1) || isnan(pq2) || isnan(pq3)) { double_break = true; break; }
 			assert(fabs(pq0*pq0 + pq1*pq1 + pq2*pq2 + pq3*pq3 - 1.0f) < 2e-3f);
 			s2xq0 = pq0 * s1xq0 - pq1 * s1xq1 - pq2 * s1xq2 - pq3 * s1xq3;
 			s2xq1 = pq0 * s1xq1 + pq1 * s1xq0 + pq2 * s1xq3 - pq3 * s1xq2;
