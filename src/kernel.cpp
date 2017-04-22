@@ -415,6 +415,7 @@ void monte_carlo(float* const s0e, const int* const lig, const int nv, const int
 		{
 			// Calculate p = -h * g, where p is for descent direction, h for Hessian, and g for gradient.
 			sum = bfh[o1 = gid] * s1g[o0 = gid];
+			if (sum == 0) break;
 			for (i = 1; i < nv; ++i)
 			{
 				sum += bfh[o1 += i * gds] * s1g[o0 += gds];
@@ -445,6 +446,7 @@ void monte_carlo(float* const s0e, const int* const lig, const int nv, const int
 			// Try different alpha values for nls times.
 			// alpha starts with 1, and shrinks to 0.1 of itself iteration by iteration.
 			alp = 1.0f;
+			bool double_break = false;
 			for (j = 0; j < nls; ++j)
 			{
 				// Calculate x2 = x1 + a * p.
@@ -467,14 +469,13 @@ void monte_carlo(float* const s0e, const int* const lig, const int nv, const int
 				s1xq3 = s1x[o0];
 				assert(fabs(s1xq0*s1xq0 + s1xq1*s1xq1 + s1xq2*s1xq2 + s1xq3*s1xq3 - 1.0f) < 2e-3f);
 				nrm = sqrt(pr0*pr0 + pr1*pr1 + pr2*pr2);
-				if (nrm == 0) break;
 				ang = 0.5f * alp * nrm;
 				sng = sin(ang) / nrm;
 				pq0 = cos(ang);
 				pq1 = sng * pr0;
 				pq2 = sng * pr1;
 				pq3 = sng * pr2;
-				if (isnan(pq0) || isnan(pq1) || isnan(pq2) || isnan(pq3)) break;	
+				if (isnan(pq0) || isnan(pq1) || isnan(pq2) || isnan(pq3)) { double_break = true; break; }
 				assert(normalized(pq0, pq1, pq2, pq3));
 				s2xq0 = pq0 * s1xq0 - pq1 * s1xq1 - pq2 * s1xq2 - pq3 * s1xq3;
 				s2xq1 = pq0 * s1xq1 + pq1 * s1xq0 + pq2 * s1xq3 - pq3 * s1xq2;
@@ -511,7 +512,7 @@ void monte_carlo(float* const s0e, const int* const lig, const int nv, const int
 			}
 
 			// If no appropriate alpha can be found, exit the BFGS loop.
-			if (j == nls) break;
+			if (j == nls || double_break) break;
 
 			// Calculate y = g2 - g1.
 			o0 = gid;
