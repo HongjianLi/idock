@@ -1,6 +1,7 @@
 #include <cmath>
 #include <cassert>
 #include <random>
+#include "array.hpp"
 #include "kernel.hpp"
 
 bool evaluate(float* e, float* g, float* a, float* q, float* c, float* d, float* f, float* t, const float* x, const int nf, const int na, const int np, const float eub, const int* shared, const float* sfe, const float* sfd, const int sfs, const array<float, 3> cr0, const array<float, 3> cr1, const array<int, 3> npr, const float gri, const vector<vector<float>>& mps, const int gid, const int gds)
@@ -156,6 +157,7 @@ bool evaluate(float* e, float* g, float* a, float* q, float* c, float* d, float*
 			a0 = m0 * xy0[i] + m1 * xy1[i] + m2 * xy2[i];
 			a1 = m3 * xy0[i] + m4 * xy1[i] + m5 * xy2[i];
 			a2 = m6 * xy0[i] + m7 * xy1[i] + m8 * xy2[i];
+			normalize(a0, a1, a2);
 			assert(fabs(a0*a0 + a1*a1 + a2*a2 - 1.0f) < 2e-3f);
 			a[k0  = i * gd3 + gid] = a0;
 			a[k0 += gds] = a1;
@@ -465,13 +467,15 @@ void monte_carlo(float* const s0e, const int* const lig, const int nv, const int
 				s1xq3 = s1x[o0];
 				assert(fabs(s1xq0*s1xq0 + s1xq1*s1xq1 + s1xq2*s1xq2 + s1xq3*s1xq3 - 1.0f) < 2e-3f);
 				nrm = sqrt(pr0*pr0 + pr1*pr1 + pr2*pr2);
+				if (nrm == 0) break;
 				ang = 0.5f * alp * nrm;
 				sng = sin(ang) / nrm;
 				pq0 = cos(ang);
 				pq1 = sng * pr0;
 				pq2 = sng * pr1;
 				pq3 = sng * pr2;
-				assert(fabs(pq0*pq0 + pq1*pq1 + pq2*pq2 + pq3*pq3 - 1.0f) < 2e-3f);
+				if (isnan(pq0) || isnan(pq1) || isnan(pq2) || isnan(pq3)) break;	
+				assert(normalized(pq0, pq1, pq2, pq3));
 				s2xq0 = pq0 * s1xq0 - pq1 * s1xq1 - pq2 * s1xq2 - pq3 * s1xq3;
 				s2xq1 = pq0 * s1xq1 + pq1 * s1xq0 + pq2 * s1xq3 - pq3 * s1xq2;
 				s2xq2 = pq0 * s1xq2 - pq1 * s1xq3 + pq2 * s1xq0 + pq3 * s1xq1;

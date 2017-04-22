@@ -18,9 +18,19 @@ float norm_sqr(const array<float, 3>& a)
 	return a[0] * a[0] + a[1] * a[1] + a[2] * a[2];
 }
 
+float norm_sqr(const float a0, const float a1, const float a2)
+{
+	return a0 * a0 + a1 * a1 + a2 * a2;
+}
+
 float norm_sqr(const array<float, 4>& a)
 {
 	return a[0] * a[0] + a[1] * a[1] + a[2] * a[2] + a[3] * a[3];
+}
+
+float norm_sqr(const float a0, const float a1, const float a2, const float a3)
+{
+	return a0 * a0 + a1 * a1 + a2 * a2 + a3 * a3;
 }
 
 float norm(const array<float, 3>& a)
@@ -28,20 +38,40 @@ float norm(const array<float, 3>& a)
 	return sqrt(norm_sqr(a));
 }
 
+float norm(const float a0, const float a1, const float a2)
+{
+	return sqrt(norm_sqr(a0, a1, a2));
+}
+
 float norm(const array<float, 4>& a)
 {
 	return sqrt(norm_sqr(a));
 }
 
+float norm(const float a0, const float a1, const float a2, const float a3)
+{
+	return sqrt(norm_sqr(a0, a1, a2, a3));
+}
+
 bool normalized(const array<float, 3>& a)
 {
-	return fabs(norm_sqr(a) - 1.0f) < 3e-3f;
+	return fabs(norm_sqr(a) - 1.0f) < 1e-2f;
+}
+
+bool normalized(const float a0, const float a1, const float a2)
+{
+	return fabs(norm_sqr(a0, a1, a2) - 1.0f) < 1e-2f;
 }
 
 //! Returns true if the current quaternion is normalized.
 bool normalized(const array<float, 4>& a)
 {
-	return fabs(norm_sqr(a) - 1.0f) < 3e-3f;
+	return fabs(norm_sqr(a) - 1.0f) < 1e-2f;
+}
+
+bool normalized(const float a0, const float a1, const float a2, const float a3)
+{
+	return fabs(norm_sqr(a0, a1, a2, a3) - 1.0f) < 1e-2f;
 }
 
 array<float, 3> normalize(const array<float, 3>& a)
@@ -55,6 +85,14 @@ array<float, 3> normalize(const array<float, 3>& a)
 	};
 }
 
+void normalize(float &a0, float &a1, float &a2)
+{
+	const float norm_inv = 1.0f / norm(a0, a1, a2);
+	a0 *= norm_inv;
+	a1 *= norm_inv;
+	a2 *= norm_inv;
+}
+
 array<float, 4> normalize(const array<float, 4>& a)
 {
 	const float norm_inv = 1.0f / norm(a);
@@ -65,6 +103,15 @@ array<float, 4> normalize(const array<float, 4>& a)
 		a[2] * norm_inv,
 		a[3] * norm_inv,
 	};
+}
+
+void normalize(float &a0, float &a1, float &a2, float &a3)
+{
+	const float norm_inv = 1.0f / norm(a0, a1, a2, a3);
+	a0 *= norm_inv;
+	a1 *= norm_inv;
+	a2 *= norm_inv;
+	a3 *= norm_inv;
 }
 
 array<float, 3> operator+(const array<float, 3>& a, const array<float, 3>& b)
