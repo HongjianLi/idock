@@ -21,36 +21,43 @@ __constant__ const int* __restrict__ lig;
 
 extern __shared__ int shared[];
 
+__device__  __noinline__// __forceinline__
 float norm_sqr(const float a0, const float a1, const float a2)
 {
 	return a0 * a0 + a1 * a1 + a2 * a2;
 }
 
+__device__  __noinline__// __forceinline__
 float norm_sqr(const float a0, const float a1, const float a2, const float a3)
 {
 	return a0 * a0 + a1 * a1 + a2 * a2 + a3 * a3;
 }
 
+__device__  __noinline__// __forceinline__
 float norm(const float a0, const float a1, const float a2)
 {
 	return sqrt(norm_sqr(a0, a1, a2));
 }
 
+__device__  __noinline__// __forceinline__
 float norm(const float a0, const float a1, const float a2, const float a3)
 {
 	return sqrt(norm_sqr(a0, a1, a2, a3));
 }
 
+__device__  __noinline__// __forceinline__
 bool normalized(const float a0, const float a1, const float a2)
 {
 	return fabs(norm_sqr(a0, a1, a2) - 1.0f) < 1e-2f;
 }
 
+__device__  __noinline__// __forceinline__
 bool normalized(const float a0, const float a1, const float a2, const float a3)
 {
 	return fabs(norm_sqr(a0, a1, a2, a3) - 1.0f) < 1e-2f;
 }
 
+__device__  __noinline__// __forceinline__
 void normalize(float &a0, float &a1, float &a2)
 {
 	const float norm_inv = 1.0f / norm(a0, a1, a2);
@@ -59,6 +66,7 @@ void normalize(float &a0, float &a1, float &a2)
 	a2 *= norm_inv;
 }
 
+__device__  __noinline__// __forceinline__
 void normalize(float &a0, float &a1, float &a2, float &a3)
 {
 	const float norm_inv = 1.0f / norm(a0, a1, a2, a3);
