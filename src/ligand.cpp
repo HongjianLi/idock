@@ -2,6 +2,7 @@
 #include <numeric>
 #include "array.hpp"
 #include "ligand.hpp"
+#include <iostream>
 
 void frame::output(boost::filesystem::ofstream& ofs) const
 {
@@ -386,8 +387,12 @@ void ligand::write(const float* const ex, const path& output_folder_path, const 
 				s.c[b.rotorYidx] = s.c[f.rotorYidx] + m * b.yy;
 				if (!b.active) continue;
 				const array<float, 3> a = m * b.xy;
+				cout << a[0] << " " << a[1] << " " << a[2] << endl;
+				normalize(a);
+				cout << a[0] << " " << a[1] << " " << a[2] << endl;
 				assert(normalized(a));
 				s.q[i] = vec4_to_qtn4(a, ex[o += num_tasks]) * s.q[k];
+				normalize(s.q[1]);
 				assert(normalized(s.q[i]));
 			}
 		}
