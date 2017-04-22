@@ -1,5 +1,5 @@
 CC=clang++ -std=c++11 -O2
-NVCC=nvcc -std=c++11 -use_fast_math
+NVCC=nvcc -use_fast_math
 
 all: bin/idock_cp bin/idock_cu bin/idock_cl src/kernel.fatbin
 
