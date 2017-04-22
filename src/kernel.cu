@@ -530,7 +530,7 @@ void monte_carlo(const int nv, const int nf, const int na, const int np)
 			pq1 = sng * pr0;
 			pq2 = sng * pr1;
 			pq3 = sng * pr2;
-			if (std::isnan(pq0) || std::isnan(pq1) || std::isnan(pq2) || std::isnan(pq3)) { double_break = true; break; }
+			if (::isnan(pq0) || ::isnan(pq1) || ::isnan(pq2) || ::isnan(pq3)) { double_break = true; break; }
 			assert(fabs(pq0*pq0 + pq1*pq1 + pq2*pq2 + pq3*pq3 - 1.0f) < 2e-3f);
 			s2xq0 = pq0 * s1xq0 - pq1 * s1xq1 - pq2 * s1xq2 - pq3 * s1xq3;
 			s2xq1 = pq0 * s1xq1 + pq1 * s1xq0 + pq2 * s1xq3 - pq3 * s1xq2;
