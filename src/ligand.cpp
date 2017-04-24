@@ -1,3 +1,4 @@
+#include <iostream>
 #include <iomanip>
 #include <numeric>
 #include "array.hpp"
@@ -10,6 +11,8 @@ void frame::output(boost::filesystem::ofstream& ofs) const
 
 ligand::ligand(const path& p) : filename(p.filename()), xs{}, nv(6)
 {
+	cout << "parsing ligand " << p.filename() << endl;
+
 	// Initialize necessary variables for constructing a ligand.
 	frames.reserve(30); // A ligand typically consists of <= 30 frames.
 	frames.emplace_back(0, 0, 0, 0, 0); // ROOT is also treated as a frame. The parent, rotorXsrn, rotorYsrn, rotorXidx of ROOT frame are dummy.
