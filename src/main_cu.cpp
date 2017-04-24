@@ -409,7 +409,7 @@ int main(int argc, char* argv[])
 
       // Save the result with the affinities as 0
       string stem = input_ligand_path.filename().string();
-      log.push_back(new log_record(move(stem), move(lig.affinities)));
+      // log.push_back(new log_record(move(stem), move(lig.affinities)));
       continue;
     }
 
@@ -475,7 +475,17 @@ int main(int argc, char* argv[])
 		const size_t lig_bytes = sizeof(int) * lig_elems[dev];
 
 		// Encode the current ligand.
-		lig.encode(ligh[dev]);
+    try {
+      lig.encode(ligh[dev]);
+    } catch (const exception& e) {
+      cerr << "Error encoding ligand: " << input_ligand_path.filename() << endl;
+      cerr << e.what() << endl;
+
+      // Save the result with the affinities as 0
+      string stem = input_ligand_path.filename().string();
+      // log.push_back(new log_record(move(stem), move(lig.affinities)));
+      continue;
+    }
 
 		// Reallocate slnd should the current solution elements exceed the default size.
 		const size_t this_sln_elems = lig.get_sln_elems();

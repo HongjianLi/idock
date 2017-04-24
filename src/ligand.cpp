@@ -3,6 +3,7 @@
 #include <numeric>
 #include "array.hpp"
 #include "ligand.hpp"
+#include "ThrowAssert.hpp"
 
 void frame::output(boost::filesystem::ofstream& ofs) const
 {
@@ -33,8 +34,8 @@ void ligand::load_from_path(const path& p)
 		if (record == "ATOM  " || record == "HETATM")
 		{
 			// Whenever an ATOM/HETATM line shows up, the current frame must be the last one.
-			assert(current == frames.size() - 1);
-			assert(f == &frames.back());
+			throw_assert(current == frames.size() - 1);
+			throw_assert(f == &frames.back());
 
 			// Parse the line.
 			atom a(line);
@@ -51,15 +52,15 @@ void ligand::load_from_path(const path& p)
 					if (a.has_covalent_bond(b))
 					{
 						// For a polar hydrogen, the bonded hetero atom must be a hydrogen bond donor.
-						assert(!b.is_hydrogen());
+						throw_assert(!b.is_hydrogen());
 						if (a.is_polar_hydrogen())
 						{
-							assert(b.is_hetero());
+							throw_assert(b.is_hetero());
 							b.donorize();
 						}
 						else
 						{
-							assert(!b.is_hetero());
+							throw_assert(!b.is_hetero());
 						}
 						// Save the hydrogen.
 						b.hydrogens.push_back(move(a));
@@ -75,7 +76,7 @@ void ligand::load_from_path(const path& p)
 			else // Current atom is a heavy atom.
 			{
 				// Find bonds between the current atom and the other atoms of the same frame.
-				assert(bonds.size() == atoms.size());
+				throw_assert(bonds.size() == atoms.size());
 				bonds.emplace_back();
 				bonds.back().reserve(4); // An atom typically consists of <= 4 bonds.
 				for (size_t i = atoms.size(); i > f->rotorYidx;)
@@ -181,15 +182,15 @@ void ligand::load_from_path(const path& p)
 					if (a.has_covalent_bond(b))
 					{
 						// For a polar hydrogen, the bonded hetero atom must be a hydrogen bond donor.
-						assert(!b.is_hydrogen());
+						throw_assert(!b.is_hydrogen());
 						if (a.is_polar_hydrogen())
 						{
-							assert(b.is_hetero());
+							throw_assert(b.is_hetero());
 							b.donorize();
 						}
 						else
 						{
-							assert(!b.is_hetero());
+							throw_assert(!b.is_hetero());
 						}
 						// Save the hydrogen.
 						b.hydrogens.push_back(move(a));
@@ -199,11 +200,11 @@ void ligand::load_from_path(const path& p)
 			}
 		}
 	}
-	assert(current == 0); // current should remain its original value if "BRANCH" and "ENDBRANCH" properly match each other.
-	assert(f == &frames.front()); // The frame pointer should remain its original value if "BRANCH" and "ENDBRANCH" properly match each other.
+	throw_assert(current == 0); // current should remain its original value if "BRANCH" and "ENDBRANCH" properly match each other.
+	throw_assert(f == &frames.front()); // The frame pointer should remain its original value if "BRANCH" and "ENDBRANCH" properly match each other.
 	frames.back().childYidx = na = atoms.size();
 	nf = frames.size();
-	assert(nf >= 1 + nv - 6);
+	throw_assert(nf >= 1 + nv - 6);
 
 	// Detect the presence of XScore atom types.
 	for (const auto& a : atoms)
@@ -311,7 +312,7 @@ void ligand::encode(int* const p) const
 	for (const frame& f : frames) *(float*)c++ = f.xy[0];
 	for (const frame& f : frames) *(float*)c++ = f.xy[1];
 	for (const frame& f : frames) *(float*)c++ = f.xy[2];
-	assert(c == p + 11 * nf);
+	throw_assert(c == p + 11 * nf);
 	for (const frame& f : frames)
 	{
 		for (const size_t b : f.branches)
@@ -319,17 +320,17 @@ void ligand::encode(int* const p) const
 			*c++ = b;
 		}
 	}
-	assert(c == p + 11 * nf + nf - 1);
+	throw_assert(c == p + 11 * nf + nf - 1);
 	for (const atom& a : atoms) *(float*)c++ = a.coord[0];
 	for (const atom& a : atoms) *(float*)c++ = a.coord[1];
 	for (const atom& a : atoms) *(float*)c++ = a.coord[2];
 	for (const atom& a : atoms) *c++ = a.xs;
-	assert(c == p + 11 * nf + nf - 1 + 4 * na);
+	throw_assert(c == p + 11 * nf + nf - 1 + 4 * na);
 	for (const interacting_pair& p : interacting_pairs) *c++ = p.i0;
 	for (const interacting_pair& p : interacting_pairs) *c++ = p.i1;
 	for (const interacting_pair& p : interacting_pairs) *c++ = p.p_offset;
-	assert(c == p + 11 * nf + nf - 1 + 4 * na + 3 * np);
-	assert(c == p + get_lig_elems());
+	throw_assert(c == p + 11 * nf + nf - 1 + 4 * na + 3 * np);
+	throw_assert(c == p + get_lig_elems());
 }
 
 //! Represents a solution found by BFGS local optimization for later clustering.
@@ -389,9 +390,11 @@ void ligand::write(const float* const ex, const path& output_folder_path, const 
 				s.c[b.rotorYidx] = s.c[f.rotorYidx] + m * b.yy;
 				if (!b.active) continue;
 				const array<float, 3> a = m * b.xy;
-				//assert(normalized(a));
+        // TODO: enable and catch in main
+        // throw_assert(normalized(a));
 				s.q[i] = vec4_to_qtn4(a, ex[o += num_tasks]) * s.q[k];
-				//assert(normalized(s.q[i]));
+        // TODO: enable and catch in main
+				// throw_assert(normalized(s.q[i]));
 			}
 		}
 
