@@ -406,6 +406,10 @@ int main(int argc, char* argv[])
     } catch (const exception& e) {
       cerr << "Error loading ligand: " << input_ligand_path.filename() << endl;
       cerr << e.what() << endl;
+
+      // Save the result with the affinities as 0
+      string stem = input_ligand_path.filename().string();
+      log.push_back(new log_record(move(stem), move(lig.affinities)));
       continue;
     }
 

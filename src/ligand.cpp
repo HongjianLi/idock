@@ -13,8 +13,6 @@ ligand::ligand(const path& p) : filename(p.filename()), xs{}, nv(6) {}
 
 void ligand::load_from_path(const path& p)
 {
-	cout << "parsing ligand " << p.filename() << endl;
-
 	// Initialize necessary variables for constructing a ligand.
 	frames.reserve(30); // A ligand typically consists of <= 30 frames.
 	frames.emplace_back(0, 0, 0, 0, 0); // ROOT is also treated as a frame. The parent, rotorXsrn, rotorYsrn, rotorXidx of ROOT frame are dummy.
