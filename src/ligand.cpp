@@ -9,7 +9,9 @@ void frame::output(boost::filesystem::ofstream& ofs) const
 	ofs << "BRANCH"    << setw(4) << rotorXsrn << setw(4) << rotorYsrn << '\n';
 }
 
-ligand::ligand(const path& p) : filename(p.filename()), xs{}, nv(6)
+ligand::ligand(const path& p) : filename(p.filename()), xs{}, nv(6) {}
+
+void ligand::load_from_path(const path& p)
 {
 	cout << "parsing ligand " << p.filename() << endl;
 

@@ -62,6 +62,8 @@ public:
 
 	//! Gets the number of elements of a conformation.
 	size_t get_cnf_elems() const;
+
+	void load_from_path(const path& p);
 private:
 	//! Represents a pair of interacting atoms that are separated by 3 consecutive covalent bonds.
 	class interacting_pair

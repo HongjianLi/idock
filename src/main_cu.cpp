@@ -392,14 +392,22 @@ int main(int argc, char* argv[])
 	     << "   Index        Ligand D  pKd 1     2     3     4     5     6     7     8     9" << endl << setprecision(2);
 	for (directory_iterator dir_iter(input_folder_path), const_dir_iter; dir_iter != const_dir_iter; ++dir_iter)
 	{
-		try {
-
     // Filter files with .pdbqt extension name.
 		const path& input_ligand_path = dir_iter->path();
 		if (input_ligand_path.extension() != ".pdbqt") continue;
 
-    // Parse the ligand. Don't declare it const as it will be moved to the callback data wrapper.
-		ligand lig(input_ligand_path);
+    cout << "Loading ligand: " << input_ligand_path.filename() << endl;
+
+    ligand lig(input_ligand_path);
+
+    try {
+      // Parse the ligand. Don't declare it const as it will be moved to the callback data wrapper.
+      lig.load_from_path(input_ligand_path);
+    } catch (const exception& e) {
+      cerr << "Error loading ligand: " << input_ligand_path.filename() << endl;
+      cerr << e.what() << endl;
+      continue;
+    }
 
 		// Find atom types that are presented in the current ligand but not presented in the grid maps.
 		vector<size_t> xs;
@@ -537,11 +545,6 @@ int main(int argc, char* argv[])
 
 		// Pop the context after use.
 		checkCudaErrors(cuCtxPopCurrent(NULL));
-
-    } catch (const exception& e) {
-      cerr << e.what() << endl;
-      continue;
-    }
 	}
 
 	// Synchronize contexts.
