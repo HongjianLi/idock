@@ -101,6 +101,7 @@ void ligand::load_from_path(const path& p)
 				}
 
 				// Save the heavy atom.
+        throw_assert(atoms.size() < 100);
 				atoms.push_back(move(a));
 			}
 		}
@@ -116,6 +117,7 @@ void ligand::load_from_path(const path& p)
 				if (atoms[i].serial == rotorXsrn)
 				{
 					// Insert a new frame whose parent is the current frame.
+          throw_assert(frames.size() < 30);
 					frames.emplace_back(current, rotorXsrn, rotorYsrn, i, atoms.size());
 					break;
 				}
