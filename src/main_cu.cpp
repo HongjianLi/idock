@@ -409,7 +409,7 @@ int main(int argc, char* argv[])
 
       // Save the result with the affinities as 0
       string stem = input_ligand_path.filename().stem().string();
-      lig.affinities = {0, 0, 0, 0, 0, 0, 0, 0, 0};
+      lig.affinities = vector<float>(max_conformations);
       log.push_back(new log_record(move(stem), move(lig.affinities)));
       continue;
     }
@@ -484,7 +484,7 @@ int main(int argc, char* argv[])
 
       // Save the result with the affinities as 0
       string stem = input_ligand_path.filename().stem().string();
-      lig.affinities = {0, 0, 0, 0, 0, 0, 0, 0, 0};
+      lig.affinities = vector<float>(max_conformations);
       log.push_back(new log_record(move(stem), move(lig.affinities)));
       continue;
     }

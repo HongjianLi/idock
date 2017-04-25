@@ -101,7 +101,7 @@ void ligand::load_from_path(const path& p)
 				}
 
 				// Save the heavy atom.
-        throw_assert(atoms.size() < 100);
+        throw_assert(atoms.size() < 100); // godel-chem assertion
 				atoms.push_back(move(a));
 			}
 		}
@@ -117,7 +117,7 @@ void ligand::load_from_path(const path& p)
 				if (atoms[i].serial == rotorXsrn)
 				{
 					// Insert a new frame whose parent is the current frame.
-          throw_assert(frames.size() < 30);
+          throw_assert(frames.size() < 30); // godel-chem assertion
 					frames.emplace_back(current, rotorXsrn, rotorYsrn, i, atoms.size());
 					break;
 				}
@@ -207,7 +207,7 @@ void ligand::load_from_path(const path& p)
 	frames.back().childYidx = na = atoms.size();
 	nf = frames.size();
 	throw_assert(nf >= 1 + nv - 6);
-  throw_assert(na > 1);
+  throw_assert(na > 1); // godel-chem assertion
 
 	// Detect the presence of XScore atom types.
 	for (const auto& a : atoms)
