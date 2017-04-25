@@ -41,7 +41,7 @@ void ligand::load_from_path(const path& p)
 			atom a(line);
 
 			// Skip unsupported atom types.
-			if (a.ad_unsupported()) continue;
+      throw_assert(!a.ad_unsupported());
 
 			if (a.is_hydrogen()) // Current atom is a hydrogen.
 			{
@@ -205,6 +205,7 @@ void ligand::load_from_path(const path& p)
 	frames.back().childYidx = na = atoms.size();
 	nf = frames.size();
 	throw_assert(nf >= 1 + nv - 6);
+  throw_assert(na > 1);
 
 	// Detect the presence of XScore atom types.
 	for (const auto& a : atoms)
