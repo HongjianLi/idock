@@ -392,12 +392,27 @@ int main(int argc, char* argv[])
 	     << "   Index        Ligand D  pKd 1     2     3     4     5     6     7     8     9" << endl << setprecision(2);
 	for (directory_iterator dir_iter(input_folder_path), const_dir_iter; dir_iter != const_dir_iter; ++dir_iter)
 	{
-		// Filter files with .pdbqt extension name.
+    // Filter files with .pdbqt extension name.
 		const path& input_ligand_path = dir_iter->path();
 		if (input_ligand_path.extension() != ".pdbqt") continue;
 
-		// Parse the ligand. Don't declare it const as it will be moved to the callback data wrapper.
-		ligand lig(input_ligand_path);
+    cout << "Loading ligand: " << input_ligand_path.filename() << endl;
+
+    ligand lig(input_ligand_path);
+
+    try {
+      // Parse the ligand. Don't declare it const as it will be moved to the callback data wrapper.
+      lig.load_from_path(input_ligand_path);
+    } catch (const exception& e) {
+      cerr << "Error loading ligand: " << input_ligand_path.filename() << endl;
+      cerr << e.what() << endl;
+
+      // Save the result with the affinities as 0
+      string stem = input_ligand_path.filename().stem().string();
+      lig.affinities = vector<float>(max_conformations);
+      log.push_back(new log_record(move(stem), move(lig.affinities)));
+      continue;
+    }
 
 		// Find atom types that are presented in the current ligand but not presented in the grid maps.
 		vector<size_t> xs;
@@ -461,7 +476,18 @@ int main(int argc, char* argv[])
 		const size_t lig_bytes = sizeof(int) * lig_elems[dev];
 
 		// Encode the current ligand.
-		lig.encode(ligh[dev]);
+    try {
+      lig.encode(ligh[dev]);
+    } catch (const exception& e) {
+      cerr << "Error encoding ligand: " << input_ligand_path.filename() << endl;
+      cerr << e.what() << endl;
+
+      // Save the result with the affinities as 0
+      string stem = input_ligand_path.filename().stem().string();
+      lig.affinities = vector<float>(max_conformations);
+      log.push_back(new log_record(move(stem), move(lig.affinities)));
+      continue;
+    }
 
 		// Reallocate slnd should the current solution elements exceed the default size.
 		const size_t this_sln_elems = lig.get_sln_elems();
