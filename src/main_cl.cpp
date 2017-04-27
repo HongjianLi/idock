@@ -4,6 +4,7 @@
 #include <numeric>
 #include <boost/program_options.hpp>
 #include <boost/filesystem/operations.hpp>
+#include <boost/filesystem/fstream.hpp>
 #include <CL/cl.h>
 #include "cl_helper.h"
 #include "io_service_pool.hpp"
@@ -13,6 +14,7 @@
 #include "ligand.hpp"
 #include "log.hpp"
 #include "source.hpp"
+using namespace boost::filesystem;
 
 //! Represents a data wrapper for kernel callback.
 template <typename T>
@@ -39,7 +41,7 @@ public:
 
 int main(int argc, char* argv[])
 {
-	path receptor_path, input_folder_path, output_folder_path, log_path;
+	path receptor_path, input_folder_path, output_folder_path, log_path, err_path;
 	array<float, 3> center, size;
 	size_t seed, num_threads, num_trees, num_tasks, num_bfgs_iterations, max_conformations;
 	float granularity;
@@ -50,6 +52,7 @@ int main(int argc, char* argv[])
 		// Initialize the default values of optional arguments.
 		const path default_output_folder_path = "output";
 		const path default_log_path = "log.csv";
+    const path default_err_path = "err.csv";
 		const size_t default_seed = chrono::system_clock::now().time_since_epoch().count();
 		const size_t default_num_threads = thread::hardware_concurrency();
 		const size_t default_num_trees = 128;
@@ -75,6 +78,7 @@ int main(int argc, char* argv[])
 		output_options.add_options()
 			("output_folder", value<path>(&output_folder_path)->default_value(default_output_folder_path), "folder of output ligands in PDBQT format")
 			("log", value<path>(&log_path)->default_value(default_log_path), "log file in csv format")
+      ("err", value<path>(&err_path)->default_value(default_err_path), "err file in csv format")
 			;
 		options_description miscellaneous_options("options (optional)");
 		miscellaneous_options.add_options()
@@ -157,6 +161,8 @@ int main(int argc, char* argv[])
 		cerr << e.what() << endl;
 		return 1;
 	}
+
+  boost::filesystem::ofstream err_ofs(err_path);
 
 	// Initialize a Mersenne Twister random number generator.
 	cout << "Using random seed " << seed << endl;

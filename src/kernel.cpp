@@ -1,6 +1,7 @@
 #include <cmath>
 #include <cassert>
 #include <random>
+#include "array.hpp"
 #include "kernel.hpp"
 
 bool evaluate(float* e, float* g, float* a, float* q, float* c, float* d, float* f, float* t, const float* x, const int nf, const int na, const int np, const float eub, const int* shared, const float* sfe, const float* sfd, const int sfs, const array<float, 3> cr0, const array<float, 3> cr1, const array<int, 3> npr, const float gri, const vector<vector<float>>& mps, const int gid, const int gds)
@@ -156,6 +157,7 @@ bool evaluate(float* e, float* g, float* a, float* q, float* c, float* d, float*
 			a0 = m0 * xy0[i] + m1 * xy1[i] + m2 * xy2[i];
 			a1 = m3 * xy0[i] + m4 * xy1[i] + m5 * xy2[i];
 			a2 = m6 * xy0[i] + m7 * xy1[i] + m8 * xy2[i];
+			normalize(a0, a1, a2);
 			assert(fabs(a0*a0 + a1*a1 + a2*a2 - 1.0f) < 2e-3f);
 			a[k0  = i * gd3 + gid] = a0;
 			a[k0 += gds] = a1;
@@ -413,6 +415,7 @@ void monte_carlo(float* const s0e, const int* const lig, const int nv, const int
 		{
 			// Calculate p = -h * g, where p is for descent direction, h for Hessian, and g for gradient.
 			sum = bfh[o1 = gid] * s1g[o0 = gid];
+			if (sum == 0) break;
 			for (i = 1; i < nv; ++i)
 			{
 				sum += bfh[o1 += i * gds] * s1g[o0 += gds];
@@ -443,6 +446,7 @@ void monte_carlo(float* const s0e, const int* const lig, const int nv, const int
 			// Try different alpha values for nls times.
 			// alpha starts with 1, and shrinks to 0.1 of itself iteration by iteration.
 			alp = 1.0f;
+			bool double_break = false;
 			for (j = 0; j < nls; ++j)
 			{
 				// Calculate x2 = x1 + a * p.
@@ -471,7 +475,8 @@ void monte_carlo(float* const s0e, const int* const lig, const int nv, const int
 				pq1 = sng * pr0;
 				pq2 = sng * pr1;
 				pq3 = sng * pr2;
-				assert(fabs(pq0*pq0 + pq1*pq1 + pq2*pq2 + pq3*pq3 - 1.0f) < 2e-3f);
+				if (isnan(pq0) || isnan(pq1) || isnan(pq2) || isnan(pq3)) { double_break = true; break; }
+				assert(normalized(pq0, pq1, pq2, pq3));
 				s2xq0 = pq0 * s1xq0 - pq1 * s1xq1 - pq2 * s1xq2 - pq3 * s1xq3;
 				s2xq1 = pq0 * s1xq1 + pq1 * s1xq0 + pq2 * s1xq3 - pq3 * s1xq2;
 				s2xq2 = pq0 * s1xq2 - pq1 * s1xq3 + pq2 * s1xq0 + pq3 * s1xq1;
@@ -507,7 +512,7 @@ void monte_carlo(float* const s0e, const int* const lig, const int nv, const int
 			}
 
 			// If no appropriate alpha can be found, exit the BFGS loop.
-			if (j == nls) break;
+			if (j == nls || double_break) break;
 
 			// Calculate y = g2 - g1.
 			o0 = gid;

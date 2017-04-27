@@ -4,6 +4,7 @@
 #include <numeric>
 #include <boost/program_options.hpp>
 #include <boost/filesystem/operations.hpp>
+#include <boost/filesystem/fstream.hpp>
 #include "cu_helper.h"
 #include "io_service_pool.hpp"
 #include "safe_class.hpp"
@@ -12,6 +13,7 @@
 #include "ligand.hpp"
 #include "log.hpp"
 #include "source.hpp"
+using namespace boost::filesystem;
 
 //! Represents a data wrapper for kernel callback.
 template <typename T>
@@ -36,7 +38,7 @@ public:
 
 int main(int argc, char* argv[])
 {
-	path receptor_path, input_folder_path, output_folder_path, log_path;
+	path receptor_path, input_folder_path, output_folder_path, log_path, err_path;
 	array<float, 3> center, size;
 	size_t seed, num_threads, num_trees, num_tasks, num_bfgs_iterations, max_conformations;
 	float granularity;
@@ -47,6 +49,7 @@ int main(int argc, char* argv[])
 		// Initialize the default values of optional arguments.
 		const path default_output_folder_path = "output";
 		const path default_log_path = "log.csv";
+    const path default_err_path = "err.csv";
 		const size_t default_seed = chrono::system_clock::now().time_since_epoch().count();
 		const size_t default_num_threads = thread::hardware_concurrency();
 		const size_t default_num_trees = 128;
@@ -72,6 +75,7 @@ int main(int argc, char* argv[])
 		output_options.add_options()
 			("output_folder", value<path>(&output_folder_path)->default_value(default_output_folder_path), "folder of output ligands in PDBQT format")
 			("log", value<path>(&log_path)->default_value(default_log_path), "log file in csv format")
+      ("err", value<path>(&err_path)->default_value(default_err_path), "err file in csv format")
 			;
 		options_description miscellaneous_options("options (optional)");
 		miscellaneous_options.add_options()
@@ -154,6 +158,8 @@ int main(int argc, char* argv[])
 		cerr << e.what() << endl;
 		return 1;
 	}
+
+  boost::filesystem::ofstream err_ofs(err_path);
 
 	// Initialize a Mersenne Twister random number generator.
 	cout << "Using random seed " << seed << endl;
@@ -392,12 +398,29 @@ int main(int argc, char* argv[])
 	     << "   Index        Ligand D  pKd 1     2     3     4     5     6     7     8     9" << endl << setprecision(2);
 	for (directory_iterator dir_iter(input_folder_path), const_dir_iter; dir_iter != const_dir_iter; ++dir_iter)
 	{
-		// Filter files with .pdbqt extension name.
+    // Filter files with .pdbqt extension name.
 		const path& input_ligand_path = dir_iter->path();
 		if (input_ligand_path.extension() != ".pdbqt") continue;
 
-		// Parse the ligand. Don't declare it const as it will be moved to the callback data wrapper.
-		ligand lig(input_ligand_path);
+    cout << "Loading ligand: " << input_ligand_path.filename() << endl;
+
+    ligand lig(input_ligand_path);
+
+    try {
+      // Parse the ligand. Don't declare it const as it will be moved to the callback data wrapper.
+      lig.load_from_path(input_ligand_path);
+    } catch (const exception& e) {
+      cerr << "Error loading ligand: " << input_ligand_path.filename() << endl;
+      cerr << e.what() << endl;
+
+      // Save the result with the affinities as 0
+      string stem = input_ligand_path.filename().stem().string();
+      lig.affinities = vector<float>(max_conformations);
+      log.push_back(new log_record(move(stem), move(lig.affinities)));
+
+      err_ofs << stem << "," << e.what() << "\n";
+      continue;
+    }
 
 		// Find atom types that are presented in the current ligand but not presented in the grid maps.
 		vector<size_t> xs;
@@ -461,7 +484,20 @@ int main(int argc, char* argv[])
 		const size_t lig_bytes = sizeof(int) * lig_elems[dev];
 
 		// Encode the current ligand.
-		lig.encode(ligh[dev]);
+    try {
+      lig.encode(ligh[dev]);
+    } catch (const exception& e) {
+      cerr << "Error encoding ligand: " << input_ligand_path.filename() << endl;
+      cerr << e.what() << endl;
+
+      // Save the result with the affinities as 0
+      string stem = input_ligand_path.filename().stem().string();
+      lig.affinities = vector<float>(max_conformations);
+      log.push_back(new log_record(move(stem), move(lig.affinities)));
+
+      err_ofs << stem << "," << e.what() << "\n";
+      continue;
+    }
 
 		// Reallocate slnd should the current solution elements exceed the default size.
 		const size_t this_sln_elems = lig.get_sln_elems();

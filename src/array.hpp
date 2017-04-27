@@ -14,26 +14,42 @@ size_t mp(const size_t x, const size_t y);
 //! Returns the square norm of a vector.
 float norm_sqr(const array<float, 3>& a);
 
+float norm_sqr(const float a0, const float a1, const float a2);
+
 //! Returns the square norm of a quaternion.
 float norm_sqr(const array<float, 4>& a);
+
+float norm_sqr(const float a0, const float a1, const float a2, const float a3);
 
 //! Returns the norm of a vector.
 float norm(const array<float, 3>& a);
 
+float norm(const float a0, const float a1, const float a2);
+
 //! Returns the norm of a quaternion.
 float norm(const array<float, 4>& a);
+
+float norm(const float a0, const float a1, const float a2, const float a3);
 
 //! Returns true if the norm of a vector is approximately 1.
 bool normalized(const array<float, 3>& a);
 
+bool normalized(const float a0, const float a1, const float a2);
+
 //! Returns true if the norm of a quaternion is approximately 1.
 bool normalized(const array<float, 4>& a);
+
+bool normalized(const float a0, const float a1, const float a2, const float a3);
 
 //! Normalizes a vector.
 array<float, 3> normalize(const array<float, 3>& a);
 
+void normalize(float &a0, float &a1, float &a2);
+
 //! Normalizes a quaternion.
 array<float, 4> normalize(const array<float, 4>& a);
+
+void normalize(float &a0, float &a1, float &a2, float &a3);
 
 //! Elementwise adds the second vectors to the first vector.
 array<float, 3> operator+(const array<float, 3>& a, const array<float, 3>& b);
