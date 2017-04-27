@@ -4,6 +4,7 @@
 #include <numeric>
 #include <boost/program_options.hpp>
 #include <boost/filesystem/operations.hpp>
+#include <boost/filesystem/fstream.hpp>
 #include "cu_helper.h"
 #include "io_service_pool.hpp"
 #include "safe_class.hpp"
@@ -12,6 +13,7 @@
 #include "ligand.hpp"
 #include "log.hpp"
 #include "source.hpp"
+using namespace boost::filesystem;
 
 //! Represents a data wrapper for kernel callback.
 template <typename T>
@@ -156,6 +158,8 @@ int main(int argc, char* argv[])
 		cerr << e.what() << endl;
 		return 1;
 	}
+
+  boost::filesystem::ofstream err_ofs(err_path);
 
 	// Initialize a Mersenne Twister random number generator.
 	cout << "Using random seed " << seed << endl;
@@ -413,6 +417,8 @@ int main(int argc, char* argv[])
       string stem = input_ligand_path.filename().stem().string();
       lig.affinities = vector<float>(max_conformations);
       log.push_back(new log_record(move(stem), move(lig.affinities)));
+
+      err_ofs << stem << "," << e.what() << "\n";
       continue;
     }
 
@@ -488,6 +494,8 @@ int main(int argc, char* argv[])
       string stem = input_ligand_path.filename().stem().string();
       lig.affinities = vector<float>(max_conformations);
       log.push_back(new log_record(move(stem), move(lig.affinities)));
+
+      err_ofs << stem << "," << e.what() << "\n";
       continue;
     }
 

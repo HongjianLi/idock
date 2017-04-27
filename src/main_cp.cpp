@@ -4,6 +4,7 @@
 #include <numeric>
 #include <boost/program_options.hpp>
 #include <boost/filesystem/operations.hpp>
+#include <boost/filesystem/fstream.hpp>
 #include "io_service_pool.hpp"
 #include "safe_class.hpp"
 #include "random_forest.hpp"
@@ -11,6 +12,7 @@
 #include "ligand.hpp"
 #include "log.hpp"
 #include "kernel.hpp"
+using namespace boost::filesystem;
 
 int main(int argc, char* argv[])
 {
@@ -134,6 +136,8 @@ int main(int argc, char* argv[])
 		cerr << e.what() << endl;
 		return 1;
 	}
+
+  boost::filesystem::ofstream err_ofs(err_path);
 
 	// Initialize a Mersenne Twister random number generator.
 	cout << "Using random seed " << seed << endl;
