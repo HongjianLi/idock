@@ -6,6 +6,7 @@
 #include <array>
 #include <random>
 #include <mutex>
+#include <functional>
 using namespace std;
 
 //! Represents a node in a tree.
