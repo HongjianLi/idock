@@ -15,9 +15,11 @@ private:
 	static const array<double, n> ad_covalent_radii; //!< Covalent radii of AutoDock4 atom types.
 	static const array<size_t, n> ad_to_xs; //!< AutoDock4 to XScore atom type conversion.
 	static const array<size_t, n> ad_to_rf; //!< AutoDock4 to RF-Score atom type conversion.
+
 public:
 	size_t serial; //!< Serial number.
-	string name; //!< Atom name;
+	string name; //!< Atom name.
+	size_t residue; //!< Residue index.
 	array<double, 3> coord; //!< 3D coordinate.
 	size_t ad; //!< AutoDock4 atom type.
 	size_t xs; //!< XScore atom type.
@@ -25,6 +27,9 @@ public:
 
 	//! Constructs an atom from an ATOM/HETATM line in PDBQT format.
 	explicit atom(const string& line);
+
+	//! Constructs an atom from an ATOM/HETATM line in PDBQT format with a given index to residue.
+	explicit atom(const string& line, size_t res_idx);
 
 	//! Returns true if the AutoDock4 atom type is not supported.
 	bool ad_unsupported() const;

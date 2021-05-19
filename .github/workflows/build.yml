@@ -1,0 +1,23 @@
+name: C++ Build
+
+on: [ push, pull_request ]
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v2
+
+    - name: Setup Boost
+      run: sudo apt install libboost-program-options-dev
+
+    - name: CMake
+      run: cmake -B build
+
+    - name: Build
+      run: cmake --build build
+
+    - name: Install
+      run: sudo cmake --install build

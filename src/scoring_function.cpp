@@ -6,21 +6,30 @@
 const double scoring_function::cutoff_sqr = cutoff * cutoff;
 const array<double, scoring_function::n> scoring_function::vdw
 {{
-	1.9, //   C_H
-	1.9, //   C_P
-	1.8, //   N_P
-	1.8, //   N_D
-	1.8, //   N_A
-	1.8, //   N_DA
-	1.7, //   O_A
-	1.7, //   O_DA
-	2.0, //   S_P
-	2.1, //   P_P
-	1.5, //   F_H
-	1.8, //  Cl_H
-	2.0, //  Br_H
-	2.2, //   I_H
-	1.2, // Met_D
+	1.9, //  0   C_H
+	1.9, //  1   C_P
+	1.8, //  2   N_P
+	1.8, //  3   N_D
+	1.8, //  4   N_A
+	1.8, //  5   N_DA
+	1.7, //  6   O_A
+	1.7, //  7   O_DA
+	2.0, //  8   S_P
+	2.1, //  9   P_P
+	1.5, // 10   F_H
+	1.8, // 11  Cl_H
+	2.0, // 12  Br_H
+	2.2, // 13   I_H
+	1.2, // 14 Met_D
+}};
+
+const array<double, 5> scoring_function::weights
+{{
+	-0.035579, // Gauss1
+	-0.005156, // Gauss2
+	 0.840245, // Repulsion
+	-0.035069, // Hydrophobic
+	-0.587439, // Hydrogen Bonding
 }};
 
 //! Returns true if the XScore atom type is hydrophobic.
@@ -47,10 +56,10 @@ inline bool is_hbond(const size_t t0, const size_t t1)
 	return (is_hbdonor(t0) && is_hbacceptor(t1)) || (is_hbdonor(t1) && is_hbacceptor(t0));
 }
 
-scoring_function::scoring_function() :
-	e(np, vector<double>(nr)),
-	d(np, vector<double>(nr)),
-	rs(nr)
+scoring_function::scoring_function()
+	: e(np, vector<double>(nr))
+	, d(np, vector<double>(nr))
+	, rs(nr)
 {
 	const double ns_inv = 1.0 / ns;
 	for (size_t i = 0; i < nr; ++i)
@@ -70,11 +79,11 @@ double scoring_function::score(const size_t t0, const size_t t1, const double r)
 
 	// The scoring function is a weighted sum of 5 terms.
 	// The first 3 terms depend on d only, while the latter 2 terms depend on t0, t1 and d.
-	return (-0.035579) * exp(-4 * d * d)
-		+  (-0.005156) * exp(-0.25 * (d - 3.0) * (d - 3.0))
-		+  ( 0.840245) * (d > 0 ? 0.0 : d * d)
-		+  (-0.035069) * ((is_hydrophobic(t0) && is_hydrophobic(t1)) ? ((d >= 1.5) ? 0.0 : ((d <= 0.5) ? 1.0 : 1.5 - d)) : 0.0)
-		+  (-0.587439) * ((is_hbond(t0, t1)) ? ((d >= 0) ? 0.0 : ((d <= -0.7) ? 1 : d * (-1.4285714285714286))): 0.0);
+	return weights[0] * exp(-4 * d * d)
+		+  weights[1] * exp(-0.25 * (d - 3.0) * (d - 3.0))
+		+  weights[2] * (d > 0 ? 0.0 : d * d)
+		+  weights[3] * ((is_hydrophobic(t0) && is_hydrophobic(t1)) ? ((d >= 1.5) ? 0.0 : ((d <= 0.5) ? 1.0 : 1.5 - d)) : 0.0)
+		+  weights[4] * ((is_hbond(t0, t1)) ? ((d >= 0) ? 0.0 : ((d <= -0.7) ? 1 : d * (-1.4285714285714286))): 0.0);
 }
 
 void scoring_function::score(double* const v, const size_t t0, const size_t t1, const double r2)

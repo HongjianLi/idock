@@ -104,16 +104,16 @@ void tree::clear()
 	}
 }
 
-forest::forest(const size_t nt, const size_t seed) :
-	vector<tree>(nt),
-	u01_s([&]()
+forest::forest(const size_t nt, const size_t seed)
+	: vector<tree>(nt)
+	, u01_s([&]()
 	{
 		lock_guard<mutex> guard(m);
 		return uniform_01(rng);
-	}),
-	nt_inv(1.0 / nt),
-	rng(seed),
-	uniform_01(0, 1)
+	})
+	, nt_inv(1.0 / nt)
+	, rng(seed)
+	, uniform_01(0, 1)
 {
 }
 

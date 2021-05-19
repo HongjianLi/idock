@@ -6,10 +6,11 @@
 #include "matrix.hpp"
 #include "array.hpp"
 #include "ligand.hpp"
+#include "string.hpp"
 
-ligand::ligand(const path& p, array<double, 3>& origin) :
-	xs{},
-	num_active_torsions(0)
+ligand::ligand(const path& p, array<double, 3>& origin, const pka& pka, double ph)
+	: xs{}
+	, num_active_torsions(0)
 {
 	// Initialize necessary variables for constructing a ligand.
 	lines.reserve(200); // A ligand typically consists of <= 200 lines.
@@ -27,7 +28,20 @@ ligand::ligand(const path& p, array<double, 3>& origin) :
 	string line;
 
 	// Start parsing.
-	for (ifstream ifs(p); getline(ifs, line);)
+	// To prepare pdbqt for ligand, please use vega. With prepare_ligand4.py, some necessary polar hydrogens are missing.
+	// With OpenBabel, hydrogens are all treated polar.
+	//
+	// [VEGA ZZ Usage]
+	// vega ligand.pdb -o ligand.pdbqt -f VINA -c Gasteiger -p VINA -l GEN -r APOLAR -j FLEX -w
+	//   -o ligand.pdbqt    write to file with name ligand.pdbqt.
+	//   -f VINA            output AudoDock Vina pdbqt format.
+	//   -c Gasteiger       add Gasteiger-Marsili empirical atomic partial charges.
+	//   -p VINA            assign atom types using the AutoDock Vina force field (based on AMBER) template.
+	//   -l GEN             add hydrogens with generic organic molecule.
+	//   -r APOLAR          remove non-polar hydrogens.
+	//   -j FLEX            output as a flexible molecule with branches.
+	//   -w                 remove water.
+	for (ifstream ifs(p); safe_getline(ifs, line);)
 	{
 		const string record = line.substr(0, 6);
 		if (record == "ATOM  " || record == "HETATM")
@@ -67,6 +81,12 @@ ligand::ligand(const path& p, array<double, 3>& origin) :
 			}
 			else // Current atom is a heavy atom.
 			{
+				// Test if the current atom should be ionized.
+				if (pka.is_ionized(a.name, trim(line.substr(17, 3)), line[21], ph))
+				{
+					a.donorize();
+				}
+
 				// Find bonds between the current atom and the other atoms of the same frame.
 				assert(bonds.size() == heavy_atoms.size());
 				bonds.push_back(vector<size_t>());
@@ -200,7 +220,7 @@ ligand::ligand(const path& p, array<double, 3>& origin) :
 	num_torsions = num_frames - 1;
 	assert(num_torsions + 1 == num_frames);
 	assert(num_torsions >= num_active_torsions);
-	assert(num_heavy_atoms + num_hydrogens + (num_torsions << 1) + 3 == lines.size()); // ATOM/HETATM lines + BRANCH/ENDBRANCH lines + ROOT/ENDROOT/TORSDOF lines == lines.size()
+	assert(num_heavy_atoms + num_hydrogens + (num_torsions << 1) + (num_torsions ? 3 : 0) == lines.size()); // ATOM/HETATM lines + BRANCH/ENDBRANCH lines + ROOT/ENDROOT/TORSDOF lines == lines.size()
 	flexibility_penalty_factor = 1 / (1 + 0.05846 * (num_active_torsions + 0.5 * (num_torsions - num_active_torsions)));
 	assert(flexibility_penalty_factor <= 1);
 
@@ -266,10 +286,13 @@ ligand::ligand(const path& p, array<double, 3>& origin) :
 				const frame& f3 = frames[f2.parent];
 				for (size_t j = f2.habegin; j < f2.haend; ++j)
 				{
-					if (k1 == f2.parent && (i == f2.rotorXidx || j == f2.rotorYidx)) continue; // The former frame is the parent of the later and either atom is on the connector bond between.
-					if (k1 > 0 && f1.parent == f2.parent && i == f1.rotorYidx && j == f2.rotorYidx) continue; // Both atoms are on a connector bond to the same parent frame.
-					if (f2.parent > 0 && k1 == f3.parent && i == f3.rotorXidx && j == f2.rotorYidx) continue; // The former frame is the grandparent of the later and both atoms are on their connector bond.
-					if (find(neighbors.cbegin(), neighbors.cend(), j) != neighbors.cend()) continue; // The later atom is within 1-4 neighbors of the former.
+					if ((k1 == f2.parent && (i == f2.rotorXidx || j == f2.rotorYidx)) // The former frame is the parent of the later and either atom is on the connector bond between.
+						|| (k1 > 0 && f1.parent == f2.parent && i == f1.rotorYidx && j == f2.rotorYidx) // Both atoms are on a connector bond to the same parent frame.
+						|| (f2.parent > 0 && k1 == f3.parent && i == f3.rotorXidx && j == f2.rotorYidx) // The former frame is the grandparent of the later and both atoms are on their connector bond.
+						|| find(neighbors.cbegin(), neighbors.cend(), j) != neighbors.cend()) // The later atom is within 1-4 neighbors of the former.
+					{
+						continue;
+					}
 					interacting_pairs.push_back(interacting_pair(i, j, mp(heavy_atoms[i].xs, heavy_atoms[j].xs)));
 				}
 			}
@@ -280,8 +303,104 @@ ligand::ligand(const path& p, array<double, 3>& origin) :
 	}
 }
 
+// This function does not require receptor::use_maps.
+result ligand::complete_result_noconf(const array<double, 3>& origin, const scoring_function& sf, const receptor& rec, vector<bool>& mask) const
+{
+	// Initialize origin coordinate, which is rotorY.
+	vector<array<double, 3>> orig(num_frames);
+
+	// Initialize heavy atom and hydrogen coordinates.
+	vector<array<double, 3>> heavy_atoms(num_heavy_atoms);
+	vector<array<double, 3>> hydrogens(num_hydrogens);
+
+	// Calculate the coor of both heavy atoms and hydrogens of ROOT frame.
+	const frame& root = frames.front();
+	orig.front() = origin;
+
+	for (size_t i = root.habegin; i < root.haend; ++i)
+	{
+		heavy_atoms[i] = orig.front() + this->heavy_atoms[i].coord;
+	}
+	for (size_t i = root.hybegin; i < root.hyend; ++i)
+	{
+		hydrogens[i] = orig.front() + this->hydrogens[i].coord;
+	}
+
+	// Calculate the coor of both heavy atoms and hydrogens of BRANCH frames.
+	for (size_t k = 1; k < num_frames; ++k)
+	{
+		const frame& f = frames[k];
+
+		// Update origin.
+		orig[k] = orig[f.parent] + f.parent_rotorY_to_current_rotorY;
+
+		// Update coor.
+		for (size_t i = f.habegin; i < f.haend; ++i)
+		{
+			heavy_atoms[i] = orig[k] + this->heavy_atoms[i].coord;
+		}
+		for (size_t i = f.hybegin; i < f.hyend; ++i)
+		{
+			hydrogens[i] = orig[k] + this->hydrogens[i].coord;
+		}
+	}
+
+	double e = 0;
+	assert(mask.size() == rec.residues.size());
+	vector<array<double, 6>> e_residues(rec.residues.size());
+	vector<double> e_heavy_atoms(num_heavy_atoms);
+
+	// Calculate inter-ligand free energy.
+	for (size_t i = 0; i < num_heavy_atoms; ++i)
+	{
+		const size_t xs = this->heavy_atoms[i].xs;
+		const auto& coord = heavy_atoms[i];
+
+		for (const auto& a : rec.atoms)
+		{
+			const double r2 = norm_sqr(coord - a.coord);
+			if (r2 < scoring_function::cutoff_sqr)
+			{
+				const size_t nsr2 = static_cast<size_t>(sf.ns * r2);
+				const double e0 = sf.e[mp(xs, a.xs)][nsr2]; // Read from template.
+				
+				// Aggregate the energy.
+				e += e0; // Total energy.
+				scoring_function::score(e_residues[a.residue].data(), xs, a.xs, r2); // Per residue energy component.
+				e_residues[a.residue].back() += e0; // Per residue energy total.
+				e_heavy_atoms[i] += e0; // Per ligand atom energy.
+				mask[a.residue] = true; // Mark contributing residue.
+			}
+		}
+	}
+
+	// Weighten the score components.
+	for (auto& e_residue : e_residues)
+	{
+		for (size_t i = 0; i < scoring_function::weights.size(); i++)
+			e_residue[i] *= scoring_function::weights[i];
+	}
+
+	// Save inter-molecular free energy into f.
+	double f = e;
+
+	// Calculate intra-ligand free energy.
+	for (const auto &p : interacting_pairs)
+	{
+		const double r2 = norm_sqr(heavy_atoms[p.i1] - heavy_atoms[p.i0]);
+		if (r2 < scoring_function::cutoff_sqr)
+		{
+			const size_t nsr2 = static_cast<size_t>(sf.ns * r2);
+			e += sf.e[p.p_offset][nsr2];
+		}
+	}
+
+	return result(e, f, false, move(heavy_atoms), move(hydrogens), move(e_heavy_atoms), move(e_residues));
+}
+
 bool ligand::evaluate(const conformation& conf, const scoring_function& sf, const receptor& rec, const double e_upper_bound, double& e, double& f, change& g) const
 {
+	assert(rec.use_maps);
 	if (!rec.within(conf.position))
 		return false;
 
@@ -366,12 +485,10 @@ bool ligand::evaluate(const conformation& conf, const scoring_function& sf, cons
 	e = 0;
 	for (size_t i = 0; i < num_heavy_atoms; ++i)
 	{
-		// Retrieve the grid map in need.
-		const vector<double>& map = rec.maps[heavy_atoms[i].xs];
-		assert(map.size());
+		const size_t xs = heavy_atoms[i].xs;
 
 		// Find the index and fraction of the current coor.
-		const array<size_t, 3> index = rec.index(coor[i]);
+		const auto index = rec.index(coor[i]);
 
 		// Assert the validity of index.
 		assert(index[0] + 1 < rec.num_probes[0]);
@@ -382,12 +499,12 @@ bool ligand::evaluate(const conformation& conf, const scoring_function& sf, cons
 		const size_t x0 = index[0];
 		const size_t y0 = index[1];
 		const size_t z0 = index[2];
-		const double e000 = map[rec.index(array<size_t, 3>{{x0, y0, z0}})];
+		const double e000 = rec.e(xs, array<size_t, 3>{{x0    , y0    , z0    }});
 
 		// The derivative of probe atoms can be precalculated at the cost of massive memory storage.
-		const double e100 = map[rec.index(array<size_t, 3>{{x0 + 1, y0    , z0    }})];
-		const double e010 = map[rec.index(array<size_t, 3>{{x0    , y0 + 1, z0    }})];
-		const double e001 = map[rec.index(array<size_t, 3>{{x0    , y0    , z0 + 1}})];
+		const double e100 = rec.e(xs, array<size_t, 3>{{x0 + 1, y0    , z0    }});
+		const double e010 = rec.e(xs, array<size_t, 3>{{x0    , y0 + 1, z0    }});
+		const double e001 = rec.e(xs, array<size_t, 3>{{x0    , y0    , z0 + 1}});
 		deri[i][0] = (e100 - e000) * rec.granularity_inverse;
 		deri[i][1] = (e010 - e000) * rec.granularity_inverse;
 		deri[i][2] = (e001 - e000) * rec.granularity_inverse;
@@ -399,7 +516,7 @@ bool ligand::evaluate(const conformation& conf, const scoring_function& sf, cons
 	f = e;
 
 	// Calculate intra-ligand free energy.
-	for (const auto& p : interacting_pairs)
+	for (const auto &p : interacting_pairs)
 	{
 		const array<double, 3> r = coor[p.i1] - coor[p.i0];
 		const double r2 = norm_sqr(r);
@@ -461,7 +578,7 @@ bool ligand::evaluate(const conformation& conf, const scoring_function& sf, cons
 	return true;
 }
 
-result ligand::compose_result(const double e, const double f, const conformation& conf) const
+result ligand::compose_result(const double e, const double f, const conformation& conf, bool from_docking) const
 {
 	vector<array<double, 3>> orig(num_frames);
 	vector<array<double, 4>> oriq(num_frames);
@@ -507,7 +624,7 @@ result ligand::compose_result(const double e, const double f, const conformation
 		}
 	}
 
-	return result(e, f, move(heavy_atoms), move(hydrogens));
+	return result(e, f, from_docking, move(heavy_atoms), move(hydrogens));
 }
 
 double ligand::calculate_rf_score(const result& r, const receptor& rec, const forest& f) const
@@ -546,21 +663,23 @@ void ligand::write_models(const path& output_ligand_path, const vector<result>& 
 	for (size_t k = 0; k < num_results; ++k)
 	{
 		const result& r = results[k];
-		ofs << "MODEL     " << setw(4) << (k + 1) << '\n' << setprecision(2)
-			<< "REMARK 921   NORMALIZED FREE ENERGY PREDICTED BY IDOCK:" << setw(8) << r.e_nd    << " KCAL/MOL\n"
-			<< "REMARK 922        TOTAL FREE ENERGY PREDICTED BY IDOCK:" << setw(8) << r.e       << " KCAL/MOL\n"
-			<< "REMARK 923 INTER-LIGAND FREE ENERGY PREDICTED BY IDOCK:" << setw(8) << r.f       << " KCAL/MOL\n"
-			<< "REMARK 924 INTRA-LIGAND FREE ENERGY PREDICTED BY IDOCK:" << setw(8) << (r.e - r.f) << " KCAL/MOL\n"
-			<< "REMARK 927      BINDING AFFINITY PREDICTED BY RF-SCORE:" << setw(8) << r.rf      << " PKD\n" << setprecision(3);
+		ofs << "MODEL     " << setw(4) << (k + 1) << endl << setprecision(2);
+		if (!r.from_docking)
+			ofs << "REMARK THIS MODEL IS IDENTICAL TO THE INPUT LIGAND AND NOT FROM DOCKING" << endl;
+		ofs << "REMARK 921   NORMALIZED FREE ENERGY PREDICTED BY IDOCK:" << setw(8) << r.e_nd    << " KCAL/MOL" << endl
+			<< "REMARK 922        TOTAL FREE ENERGY PREDICTED BY IDOCK:" << setw(8) << r.e       << " KCAL/MOL" << endl
+			<< "REMARK 923 INTER-LIGAND FREE ENERGY PREDICTED BY IDOCK:" << setw(8) << r.f       << " KCAL/MOL" << endl
+			<< "REMARK 924 INTRA-LIGAND FREE ENERGY PREDICTED BY IDOCK:" << setw(8) << r.e - r.f << " KCAL/MOL" << endl
+			<< "REMARK 927      BINDING AFFINITY PREDICTED BY RF-SCORE:" << setw(8) << r.rf      << " PKD" << endl << setprecision(3);
 
 		size_t heavy_atom = 0;
 		size_t hydrogen = 0;
 		for (const auto& line : lines)
 		{
-			if (line.size() >= 79) // This line starts with "ATOM" or "HETATM".
+			if (line.size() >= 78) // This line starts with "ATOM" or "HETATM".
 			{
-				const bool is_hydrogen = line[77] == 'H' && (line[78] == ' ' || line[78] == 'D');
-				const double free_energy = is_hydrogen ? 0 : rec.maps[heavy_atoms[heavy_atom].xs][rec.index(rec.index(r.heavy_atoms[heavy_atom]))];
+				const bool is_hydrogen = line[77] == 'H' && (line.length() == 78 || line[78] == ' ' || line[78] == 'D');
+				const double free_energy = is_hydrogen ? 0 : r.e_heavy_atoms[heavy_atom];
 				const array<double, 3>& coordinate = is_hydrogen ? r.hydrogens[hydrogen++] : r.heavy_atoms[heavy_atom++];
 				ofs << line.substr(0, 30)
 					<< setw(8) << coordinate[0]
@@ -568,7 +687,7 @@ void ligand::write_models(const path& output_ligand_path, const vector<result>& 
 					<< setw(8) << coordinate[2]
 					<< line.substr(54, 16)
 					<< setw(6) << free_energy
-					<< line.substr(76);
+					<< setw(4) << left << line.substr(76) << right;
 			}
 			else // This line starts with "ROOT", "ENDROOT", "BRANCH", "ENDBRANCH", TORSDOF", which will not change during docking.
 			{
@@ -579,6 +698,61 @@ void ligand::write_models(const path& output_ligand_path, const vector<result>& 
 		ofs << "ENDMDL\n";
 		assert(heavy_atom == r.heavy_atoms.size());
 		assert(hydrogen == r.hydrogens.size());
+	}
+}
+
+//! Revisit a result and calculate inter-molecular free energy components to every ligand atom and from every receptor residue.
+void ligand::calculate_by_comp(result& result, const scoring_function& sf, const receptor& rec, vector<bool>& mask) const
+{
+	auto& e_residues = result.e_residues;
+	auto& e_heavy_atoms = result.e_heavy_atoms;
+	assert(e_residues.empty());
+	assert(e_heavy_atoms.empty());
+
+	e_residues.resize(rec.residues.size());
+	e_heavy_atoms.resize(num_heavy_atoms);
+
+	for (size_t k = 0; k < num_heavy_atoms; ++k)
+	{
+		const auto& coord = result.heavy_atoms[k];
+		const auto xs = heavy_atoms[k].xs;
+
+		// Find the index of the current coord.
+		const auto index = rec.index(coord);
+		const auto coord_grid = rec.coord(index); // Aligned coordinate.
+
+		// Iterate through all atom ids contributing energy to the grid.
+		for (const auto& a : rec.atoms)
+		{
+			assert(!a.is_hydrogen());
+
+			auto r2 = distance_sqr(a.coord, coord_grid);
+			if (r2 < scoring_function::cutoff_sqr)
+			{
+				size_t r_offset = static_cast<size_t>(sf.ns * r2);
+				assert(r_offset < sf.nr);
+
+				size_t p = mp(a.xs, xs);
+				assert(p < sf.np);
+
+				assert(!sf.e[p].empty());
+				const double e0 = sf.e[p][r_offset]; // Read from template.
+
+				scoring_function::score(e_residues[a.residue].data(), a.xs, xs, r2);
+				e_residues[a.residue].back() += e0; // Aggregate the energy for the residue the ligand atom locates in.
+				e_heavy_atoms[k] += e0; // Aggregate the energy for the ligand atom.
+
+				// Mark contributing residue.
+				mask[a.residue] = true;
+			}
+		}
+	}
+
+	// Weighten the score components.
+	for (auto& e_residue : e_residues)
+	{
+		for (size_t i = 0; i < scoring_function::weights.size(); i++)
+			e_residue[i] *= scoring_function::weights[i];
 	}
 }
 
@@ -750,10 +924,10 @@ void ligand::monte_carlo(vector<result>& results, const size_t seed, const scori
 			ryp = 1 / yp;
 			pco = ryp * (ryp * yhy + alpha);
 			for (size_t i = 0; i < num_variables; ++i)
-			for (size_t j = i; j < num_variables; ++j) // includes i
-			{
-				h[mr(i, j)] += ryp * (mhy[i] * p[j] + mhy[j] * p[i]) + pco * p[i] * p[j];
-			}
+				for (size_t j = i; j < num_variables; ++j) // includes i
+				{
+					h[mr(i, j)] += ryp * (mhy[i] * p[j] + mhy[j] * p[i]) + pco * p[i] * p[j];
+				}
 
 			// Move to the next iteration.
 			c1 = c2;
@@ -770,7 +944,7 @@ void ligand::monte_carlo(vector<result>& results, const size_t seed, const scori
 			// e1 will be saved if and only if it is even better than the best one.
 			if (e1 < best_e || results.size() < results.capacity())
 			{
-				result::push(results, compose_result(e1, f1, c1), required_square_error);
+				result::push(results, compose_result(e1, f1, c1, true), required_square_error);
 				if (e1 < best_e) best_e = e0;
 			}
 

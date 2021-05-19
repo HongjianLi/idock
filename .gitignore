@@ -7,4 +7,6 @@
 .vs
 doc
 bin
+obj
 dev
+build

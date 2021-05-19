@@ -1,6 +1,7 @@
 #include <algorithm>
 #include <cassert>
 #include "array.hpp"
+#include "string.hpp"
 #include "atom.hpp"
 
 //! AutoDock4 atom type strings, e.g. H, HD, C, A.
@@ -197,14 +198,23 @@ const array<size_t, atom::n> atom::ad_to_rf
 }};
 
 //! Constructs an atom from an ATOM/HETATM line in PDBQT format.
-atom::atom(const string& line) :
-	serial(stoul(line.substr(6, 5))),
-	name(line.substr(12, 4)),
-	coord({{stod(line.substr(30, 8)), stod(line.substr(38, 8)), stod(line.substr(46, 8))}}),
-	ad(find(ad_strings.cbegin(), ad_strings.cend(), line.substr(77, isspace(line[78]) ? 1 : 2)) - ad_strings.cbegin()),
-	xs(ad_to_xs[ad]),
-	rf(ad_to_rf[ad])
+atom::atom(const string& line)
+	: atom(line, 0)
 {
+}
+
+//! Constructs an atom from an ATOM/HETATM line in PDBQT format with a given index to residue.
+atom::atom(const string& line, size_t res_idx)
+	: serial(stoul(line.substr(6, 5)))
+	, name(trim(line.substr(12, 4)))
+	, residue(res_idx)
+	, coord({{stod(line.substr(30, 8)), stod(line.substr(38, 8)), stod(line.substr(46, 8))}})
+	, ad(find(ad_strings.cbegin(), ad_strings.cend(), trim(line.substr(77, 2))) - ad_strings.cbegin())
+{
+	if (ad >= ad_strings.size())
+		throw domain_error("Atom type " + trim(line.substr(77, 2)) + " cannot be recognized");
+	xs = ad_to_xs[ad];
+	rf = ad_to_rf[ad];
 }
 
 //! Returns true if the AutoDock4 atom type is not supported.

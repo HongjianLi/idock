@@ -1,0 +1,97 @@
+name: C++ Release
+
+on:
+  push:
+    tags: [ "v*" ]
+  pull_request:
+    tags: [ "v*" ]
+
+jobs:
+  create-release:
+    runs-on: ubuntu-latest
+
+    outputs:
+      html_url: ${{ steps.create_release.outputs.html_url }}
+      upload_url: ${{ steps.create_release.outputs.upload_url }}
+
+    steps:
+    - name: Create Release
+      id: create_release
+      uses: actions/create-release@v1
+      env:
+        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+      with:
+        tag_name: ${{ github.ref }}
+        release_name: Release ${{ github.ref }}
+        body: |
+          ## Release Note
+
+          Please refer to the commit messages for what's new in this release. We provide prebuilt binaries here for the x86-64 architecture as-is without any warranty. Follow the developer's guide on the project readme should you need to customize your build or for any other architecture.
+
+          ### Deployment guide
+
+          The prebuilt binaries are provided as-is. Download the binary file for your certain system, place it in a binary path with a short name.
+          e.g.
+
+          On Windows: C:\WINDOWS\system32\jdock.exe
+          On Linux/MacOS: /usr/local/bin/jdock
+        draft: false
+        prerelease: false
+    - name: Echo
+      run: echo upload_url=${{ steps.create_release.outputs.upload_url }}, html_url=${{ steps.create_release.outputs.html_url }}
+
+  build:
+    strategy:
+      matrix:
+        include:
+        - for: linux
+          os: ubuntu-latest
+          get_boost_cmd: "sudo apt install libboost-program-options-dev"
+          asset_path: ./build/jdock
+          asset_name: jdock_linux_x64
+          asset_content_type: x-executable
+
+        - for: win
+          os: windows-latest
+          get_boost_cmd: |
+            # Boost 1.75.0 is the latest version that the latest cmake v3.20.2 finds
+            $Url = "https://sourceforge.net/projects/boost/files/boost-binaries/1.75.0/boost_1_75_0-msvc-14.2-64.exe"
+            (New-Object System.Net.WebClient).DownloadFile($Url, "$env:TEMP\boost.exe")
+            Start-Process -Wait -FilePath "$env:TEMP\boost.exe" "/SILENT","/SP-","/SUPPRESSMSGBOXES"
+          asset_path: ./build/Release/jdock.exe
+          asset_name: jdock_win_x64.exe
+          asset_content_type: vnd.microsoft.portable-executable
+
+        - for: mac
+          os: macos-latest 
+          get_boost_cmd: "brew install boost"
+          asset_path: ./build/jdock
+          asset_name: jdock_mac_x64
+          asset_content_type: mac-binhex40
+
+    name: build-${{ matrix.for }}
+    runs-on: ${{ matrix.os }}
+    needs: create-release
+
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v2
+
+    - name: Setup Boost
+      run: ${{ matrix.get_boost_cmd }}
+
+    - name: CMake
+      run: cmake -B build
+
+    - name: Build
+      run: cmake --build build --config Release
+
+    - name: Upload Asset to Release
+      uses: actions/upload-release-asset@v1
+      env:
+        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+      with:
+        upload_url: ${{ needs.create-release.outputs.upload_url }}
+        asset_path: ${{ matrix.asset_path }}
+        asset_name: ${{ matrix.asset_name }}
+        asset_content_type: application/${{ matrix.asset_content_type }}

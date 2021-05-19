@@ -16,6 +16,7 @@ public:
 	static const size_t cutoff = 8; //!< Atom type pair distance cutoff.
 	static const size_t nr = ns*cutoff*cutoff+1; //!< Number of samples within the entire cutoff.
 	static const double cutoff_sqr; //!< Cutoff square.
+	static const array<double, 5> weights; //!< Weight constants for 5 terms.
 
 	//! Constructs an empty scoring function.
 	explicit scoring_function();
@@ -34,6 +35,7 @@ public:
 
 	vector<vector<double>> e; //!< Scoring function values.
 	vector<vector<double>> d; //!< Scoring function derivatives divided by distance.
+
 private:
 	static const array<double, n> vdw; //!< Van der Waals distances for XScore atom types.
 	vector<double> rs; //!< Distance samples.
